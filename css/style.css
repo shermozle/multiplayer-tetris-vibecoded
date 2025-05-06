@@ -1,0 +1,402 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #121212;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    text-align: center;
+    padding: 20px;
+    max-width: 1200px;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: #00ffff;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #00ffff;
+    font-size: 1.8rem;
+}
+
+h3 {
+    color: #00ffff;
+    margin-bottom: 10px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Game mode selection */
+.game-modes {
+    margin: 30px auto;
+    max-width: 500px;
+}
+
+.mode-btn {
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 1.2rem;
+    background-color: #1e1e1e;
+    color: #00ffff;
+    border: 2px solid #00ffff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mode-btn:hover {
+    background-color: #00ffff;
+    color: #000;
+    transform: scale(1.05);
+}
+
+.instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.instructions code {
+    display: block;
+    padding: 8px 12px;
+    margin: 10px 0;
+    background-color: #000;
+    color: #00ffff;
+    font-family: monospace;
+    border-radius: 3px;
+}
+
+.instructions a {
+    color: #00ffff;
+    text-decoration: none;
+}
+
+.instructions a:hover {
+    text-decoration: underline;
+}
+
+/* Player setup */
+.player-setup {
+    margin: 30px auto;
+    max-width: 500px;
+    padding: 20px;
+    background-color: #1e1e1e;
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+}
+
+.form-group {
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+label {
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #00ffff;
+    background-color: #121212;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 200px;
+}
+
+/* Waiting room */
+.waiting-room {
+    margin: 30px auto;
+    max-width: 500px;
+    padding: 30px;
+    background-color: #1e1e1e;
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+}
+
+.spinner {
+    margin: 20px auto;
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #00ffff;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Game area */
+.game-container {
+    margin-top: 20px;
+}
+
+.game-area {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.player-board {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.opponent-boards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.opponent-board {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.opponent-board canvas {
+    width: 150px;
+    height: 300px;
+    background-color: #000;
+    border: 2px solid #ff4500;
+    box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+}
+
+.opponent-name {
+    margin: 5px 0;
+    color: #ff4500;
+    font-size: 0.9rem;
+}
+
+canvas#game {
+    background-color: #000;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+canvas#next-piece {
+    background-color: #000;
+    border: 1px solid #00ffff;
+    margin: 10px 0;
+}
+
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 200px;
+    padding: 10px;
+    background-color: #1e1e1e;
+    border: 2px solid #00ffff;
+    border-radius: 5px;
+}
+
+.score-container {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.score-container h2, .score-container h3 {
+    margin: 10px 0;
+    color: #fff;
+}
+
+.next-piece-container {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.controls {
+    margin-bottom: 20px;
+    text-align: left;
+    width: 100%;
+}
+
+.controls h3 {
+    margin-bottom: 10px;
+    color: #00ffff;
+}
+
+.controls p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.sound-controls {
+    margin: 15px 0;
+}
+
+#music-toggle-btn {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #00ffff;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+#music-toggle-btn:hover {
+    background-color: #00ffff;
+    color: #000;
+}
+
+#music-toggle-btn.off {
+    background-color: #444;
+    border-color: #777;
+    color: #aaa;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    background-color: #00ffff;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    background-color: #00cccc;
+    transform: scale(1.05);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+#back-btn, #cancel-wait-btn {
+    background-color: #666;
+    color: white;
+}
+
+#back-btn:hover, #cancel-wait-btn:hover {
+    background-color: #888;
+}
+
+/* Ready indicator for multiplayer */
+.ready-indicator {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0, 255, 0, 0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    z-index: 5;
+}
+
+/* Opponent status overlays */
+.defeat-overlay,
+.left-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.defeat-overlay {
+    background-color: rgba(255, 0, 0, 0.5);
+}
+
+.left-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.opponent-board.defeated,
+.opponent-board.left {
+    opacity: 0.7;
+}
+
+/* Speed notification */
+.speed-notification {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    background-color: rgba(255, 255, 0, 0.8);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    opacity: 0;
+    z-index: 100;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
+}
+
+.speed-notification.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+@media (max-width: 900px) {
+    .game-area {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .side-panel {
+        width: 300px;
+        margin-top: 20px;
+    }
+    
+    .opponent-boards {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .opponent-board canvas {
+        width: 120px;
+        height: 240px;
+    }
+} 

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tetris</h1>
+        
+        <div id="game-modes" class="game-modes">
+            <h2>Select Game Mode</h2>
+            <button id="single-player-btn" class="mode-btn">Single Player</button>
+            <button id="multiplayer-btn" class="mode-btn">Multiplayer</button>
+            <div class="instructions">
+                <p>For multiplayer, start the Node.js server:</p>
+                <code>node server.js</code>
+                <p>Then access the game at <a href="http://localhost:3000">http://localhost:3000</a></p>
+            </div>
+        </div>
+        
+        <div id="player-setup" class="player-setup hidden">
+            <h2>Player Setup</h2>
+            <div class="form-group">
+                <label for="player-name">Your Name:</label>
+                <input type="text" id="player-name" placeholder="Enter your name">
+            </div>
+            <button id="start-multiplayer-btn">Join Game</button>
+            <button id="back-btn">Back</button>
+        </div>
+        
+        <div id="waiting-room" class="waiting-room hidden">
+            <h2>Waiting for Players</h2>
+            <p>Waiting for another player to join...</p>
+            <div class="spinner"></div>
+            <p id="players-waiting">Players in queue: <span id="player-count">1</span></p>
+            <button id="cancel-wait-btn">Cancel</button>
+        </div>
+        
+        <div id="game-container" class="game-container hidden">
+            <div class="game-area">
+                <div class="player-board">
+                    <h3 id="player-board-name">You</h3>
+                    <canvas id="game" width="300" height="600"></canvas>
+                </div>
+                
+                <div id="opponent-boards" class="opponent-boards hidden">
+                    <!-- Opponent boards will be added dynamically -->
+                </div>
+                
+                <div class="side-panel">
+                    <div class="score-container">
+                        <h2>Score: <span id="score">0</span></h2>
+                        <h3>Level: <span id="level">1</span></h3>
+                        <h3>Lines: <span id="lines">0</span></h3>
+                    </div>
+                    <div class="next-piece-container">
+                        <h3>Next Piece:</h3>
+                        <canvas id="next-piece" width="100" height="100"></canvas>
+                    </div>
+                    <div class="controls">
+                        <h3>Controls:</h3>
+                        <p>← → : Move left/right</p>
+                        <p>↑ : Rotate</p>
+                        <p>↓ : Soft drop</p>
+                        <p>Space : Hard drop</p>
+                    </div>
+                    <div class="sound-controls">
+                        <button id="music-toggle-btn">Music: On</button>
+                    </div>
+                    <button id="start-btn">Start Game</button>
+                    <button id="pause-btn">Pause</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/tetris.js"></script>
+</body>
+</html> 
