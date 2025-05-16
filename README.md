@@ -1,10 +1,10 @@
-# Web-based Tetris Game
+# Web-based blocq Game
 
-A classic Tetris game implemented using HTML5 Canvas, CSS, and JavaScript with real-time multiplayer functionality using WebSockets.
+A classic blocq game implemented using HTML5 Canvas, CSS, and JavaScript with real-time multiplayer functionality using WebSockets.
 
 ## Features
 
-- Classic Tetris gameplay
+- Classic blocq gameplay
 - Score tracking and leveling system
 - Next piece preview
 - Responsive design
@@ -61,7 +61,7 @@ A classic Tetris game implemented using HTML5 Canvas, CSS, and JavaScript with r
 
 ## Implementation Details
 
-This Tetris game is built with:
+This blocq game is built with:
 - HTML5 Canvas for rendering the game board and pieces
 - CSS for styling and responsive design
 - Vanilla JavaScript for game logic

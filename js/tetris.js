@@ -106,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'GAME_WON':
                     handleGameWonMessage(message);
                     break;
+                case 'NEW_MATCH_AVAILABLE':
+                    handleNewMatchAvailable(message);
+                    break;
                 default:
                     console.log('Unknown message type:', message.type);
             }
@@ -336,25 +339,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const linesElement = document.getElementById('lines');
 
     // Audio elements
-    const bgMusic = new Audio('https://ia902905.us.archive.org/11/items/TetrisThemeMusic/Tetris.mp3');
+    const bgMusic = new Audio('assets/sounds/background-music.mp3'); // Using puzzle game music
     bgMusic.loop = true;
     bgMusic.volume = 0.5;
     
     // Sound effects
     const tapSound = new Audio();
-    tapSound.src = 'https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3';
+    tapSound.src = 'assets/sounds/tap.mp3';
     tapSound.volume = 0.3;
     
     const clearSound = new Audio();
-    clearSound.src = 'https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3';
+    clearSound.src = 'assets/sounds/clear.mp3';
     clearSound.volume = 0.4;
     
     const attackSound = new Audio();
-    attackSound.src = 'https://assets.mixkit.co/active_storage/sfx/529/529-preview.mp3';
+    attackSound.src = 'assets/sounds/attack.mp3';
     attackSound.volume = 0.4;
     
     const speedUpSound = new Audio();
-    speedUpSound.src = 'https://assets.mixkit.co/active_storage/sfx/582/582-preview.mp3';
+    speedUpSound.src = 'assets/sounds/speedup.mp3';
     speedUpSound.volume = 0.4;
 
     // Game constants
@@ -443,6 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dropInterval = 1000; // Initial drop speed - 1 second
     let lastTime = 0;
     let animationId;
+    let gameStartTime = 0; // Track when the game started
 
     // Multiplayer simulation - For demo purposes only
     // In a real implementation, this would be replaced with actual server communication
@@ -475,6 +479,9 @@ document.addEventListener('DOMContentLoaded', () => {
         drawBoard();
         drawNextPiece();
         
+        // Set game start time
+        gameStartTime = Date.now();
+        
         // Clear any previous speed notifications
         clearSpeedNotification();
         
@@ -482,6 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (musicEnabled && !isPaused) {
             bgMusic.play().catch(e => {
                 console.log("Audio couldn't autoplay:", e);
+            });
+        }
+        
+        // Track game start event with Amplitude
+        if (window.trackEvent) {
+            trackEvent('Game Started', {
+                game_mode: isMultiplayer ? 'Multiplayer' : 'Single Player',
+                initial_level: level
             });
         }
     }
@@ -550,9 +565,11 @@ document.addEventListener('DOMContentLoaded', () => {
             dropInterval = Math.max(100, 1000 - (level - 1) * 100 - currentSpeedLevel * 50);
             console.log(`Speed increased at ${score} points! New drop interval: ${dropInterval}ms`);
             
-            // Play speed up sound
-            speedUpSound.currentTime = 0;
-            speedUpSound.play().catch(e => console.log("Couldn't play speed up sound:", e));
+            // Only play speed up sound if we're not at the start of the game (score > 0)
+            if (score > 0) {
+                speedUpSound.currentTime = 0;
+                speedUpSound.play().catch(e => console.log("Couldn't play speed up sound:", e));
+            }
             
             // Visual feedback for speed increase
             const flashEffect = () => {
@@ -736,6 +753,44 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = 'white';
         ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
         ctx.fillText('Press Start to play again', canvas.width / 2, canvas.height / 2 + 40);
+        
+        // Track game over event with Amplitude
+        if (window.trackEvent) {
+            trackEvent('Game Over', {
+                final_score: score,
+                final_level: level,
+                lines_cleared: lines,
+                game_mode: isMultiplayer ? 'Multiplayer' : 'Single Player',
+                game_duration_ms: Date.now() - gameStartTime
+            });
+        }
+    }
+    
+    // Handle new match available notification
+    function handleNewMatchAvailable(message) {
+        // Show dialog to ask user if they want to join a new match
+        if (confirm('Another player is waiting for a match. Join new game?')) {
+            // Reset game state
+            resetGameState();
+            
+            // Join a new game with the same player name
+            sendMessage({
+                type: 'JOIN_GAME',
+                playerName: playerName
+            });
+        }
+    }
+    
+    // Reset game state for a new match
+    function resetGameState() {
+        // Clear game boards and reset variables
+        gameId = null;
+        opponents = {};
+        opponentBoards.innerHTML = '';
+        pieceQueue = [];
+        attackQueue = [];
+        gameOver = true;
+        cancelAnimationFrame(animationId);
     }
 
     // Check for collision
@@ -828,6 +883,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 level = newLevel;
                 // Increase speed with each level
                 dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+                
+                // Track level up event with Amplitude
+                if (window.trackEvent) {
+                    trackEvent('Level Up', {
+                        new_level: level,
+                        lines_cleared: lines,
+                        current_score: score
+                    });
+                }
             }
             
             updateScore();
@@ -1061,6 +1125,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             startBtn.disabled = true;
             startBtn.textContent = 'Waiting...';
+            
+            // Track player ready event
+            if (window.trackEvent) {
+                trackEvent('Player Ready', {
+                    player_name: playerName || 'Unknown'
+                });
+            }
         } else {
             // In single player, Start button starts the game directly
             cancelAnimationFrame(animationId);
@@ -1068,6 +1139,14 @@ document.addEventListener('DOMContentLoaded', () => {
             isPaused = false;
             startBtn.textContent = 'Restart';
             draw();
+            
+            // Track button click
+            if (window.trackEvent) {
+                trackEvent('Button Clicked', {
+                    button_name: 'Start/Restart',
+                    game_mode: 'Single Player'
+                });
+            }
             
             // Ensure music is playing when game starts (if enabled)
             if (musicEnabled) {
@@ -1079,6 +1158,15 @@ document.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => {
         isPaused = !isPaused;
         pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+        
+        // Track pause/resume action
+        if (window.trackEvent) {
+            trackEvent('Game ' + (isPaused ? 'Paused' : 'Resumed'), {
+                current_score: score,
+                current_level: level,
+                lines_cleared: lines
+            });
+        }
         
         // Pause/resume music with game if music is enabled
         if (isPaused) {

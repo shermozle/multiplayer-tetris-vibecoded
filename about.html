@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About blocq</title>
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <link rel="shortcut icon" href="assets/images/favicon.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="blocq-logo.png" alt="blocq Logo" class="logo-large">
+        </div>
+        <nav class="main-nav">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="about.html" class="nav-link active">About</a>
+        </nav>
+        
+        <div class="about-container">
+            <h2>About blocq</h2>
+            
+            <div class="about-content">
+                <!-- Content will be added by the user -->
+                <p>blocq is a modern multiplayer block game that allows players to compete in real-time.</p>
+                
+                <h3>Features</h3>
+                <ul>
+                    <li>Single player mode</li>
+                    <li>Real-time multiplayer</li>
+                    <li>Competitive gameplay</li>
+                    <li>Modern visual design</li>
+                </ul>
+                
+                <h3>How to Play</h3>
+                <p>Use the arrow keys to move and rotate pieces. Press space to hard drop.</p>
+                
+                <h3>Development</h3>
+                <p>blocq was developed using JavaScript, HTML5 Canvas, and WebSockets for real-time multiplayer functionality.</p>
+                <p>Music thanks to <a href="https://soundimage.org">soundimage.org</a>.</p>
+                <p>Sounds thanks to <a href="https://freesound.org">freesound.org</a>.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Amplitude Analytics SDK -->
+    <script type="text/javascript" src="https://cdn.amplitude.com/libs/amplitude-8.21.4-min.js"></script>
+    <script src="https://cdn.amplitude.com/libs/analytics-browser-2.9.0-min.js.gz"></script>
+    <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.4.0-min.js.gz"></script>
+
+    <script type="text/javascript">
+        // Initialize Amplitude directly
+        const sessionReplayTracking = window.sessionReplay.plugin();
+        window.amplitude.add(sessionReplayTracking);
+        window.amplitude.init('fe00a8242f399484980e0ff0c644c5de', null, {
+            logLevel: 'INFO',
+            includeUtm: true,
+            includeReferrer: true,
+            trackingOptions: {
+                ipAddress: true,
+                language: true,
+                platform: true
+            }
+        });
+        
+        // Define a helper function to track events
+        function trackEvent(eventName, eventProperties = {}) {
+            try {
+                window.amplitude.logEvent(eventName, eventProperties);
+                console.log('📊 Event tracked:', eventName, eventProperties);
+            } catch (error) {
+                console.error('Failed to track event:', error);
+            }
+        }
+        
+        // Track page view event
+        trackEvent('Page Viewed', {
+            page_url: window.location.href,
+            page_title: document.title,
+            page_path: window.location.pathname
+        });
+        
+        // Make tracking function available globally
+        window.trackEvent = trackEvent;
+    </script>
+</body>
+</html>

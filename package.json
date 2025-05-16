@@ -1,7 +1,7 @@
 {
   "name": "tetris-multiplayer",
   "version": "1.0.0",
-  "description": "Multiplayer Tetris game with WebSockets",
+  "description": "Multiplayer blocq game with WebSockets",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

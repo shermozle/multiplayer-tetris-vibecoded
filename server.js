@@ -6,14 +6,33 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enable trust proxy to work behind load balancers/proxies
+app.set('trust proxy', 1);
+
 // Serve static files
 app.use(express.static(path.join(__dirname)));
+
+// Add server status endpoint
+app.get('/status', (req, res) => {
+    res.json({
+        status: 'online',
+        games: Object.keys(games).length,
+        waitingPlayers: waitingPlayers.length,
+        connectedPlayers: Object.keys(playerSockets).length
+    });
+});
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Create WebSocket server
-const wss = new WebSocket.Server({ server });
+// Create WebSocket server with ping enabled
+const wss = new WebSocket.Server({ 
+    server,
+    // Allow server to be fronted by reverse proxies
+    clientTracking: true,
+    // Increase max payload size for board updates
+    maxPayload: 1024 * 1024 // 1MB max payload
+});
 
 // Game state
 const games = {}; // Stores active games
@@ -21,8 +40,11 @@ const waitingPlayers = []; // Queue of players waiting for a match
 const playerSockets = {}; // Map of player IDs to WebSocket connections
 
 // Handle WebSocket connections
-wss.on('connection', (ws) => {
-    console.log('New client connected');
+// Main WebSocket connection handler
+wss.on('connection', (ws, req) => {
+    // Get client IP for logging and rate limiting
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    console.log(`New client connected from ${ip}`);
     
     let playerId = null;
     let gameId = null;
@@ -75,19 +97,24 @@ wss.on('connection', (ws) => {
     
     // Handle player joining a game
     function handleJoinGame(ws, data) {
-        playerId = 'player_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        playerSockets[playerId] = ws;
-        ws.playerId = playerId; // Store player ID directly on the WebSocket connection
-        
-        const player = {
-            id: playerId,
-            name: data.playerName,
-            ready: false
-        };
-        
+    // Validate player name
+    const playerName = (data.playerName || '').trim().substring(0, 20) || 'Player';
+    
+    // Generate a unique player ID
+    playerId = 'player_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+    playerSockets[playerId] = ws;
+    ws.playerId = playerId; // Store player ID directly on the WebSocket connection
+    
+    const player = {
+        id: playerId,
+        name: playerName,
+        ready: false,
+    joinTime: Date.now()
+    };
+    
         // Check if there are players waiting
         if (waitingPlayers.length > 0) {
-            // Match with a waiting player
+            // Match with a waiting player (first in queue for fairness)
             const opponent = waitingPlayers.shift();
             gameId = 'game_' + Date.now();
             
@@ -171,6 +198,18 @@ wss.on('connection', (ws) => {
             // Delete game if necessary
             delete games[gameId];
             console.log(`Game ${gameId} ended because player ${playerId} left`);
+            
+            // Check if we can match the remaining player with someone waiting
+            game.players.forEach(player => {
+                if (player.id !== playerId && playerSockets[player.id]) {
+                    // If there are waiting players, suggest a new match
+                    if (waitingPlayers.length > 0) {
+                        sendToPlayer(player.id, {
+                            type: 'NEW_MATCH_AVAILABLE'
+                        });
+                    }
+                }
+            });
         }
         
         // Clean up player data
@@ -387,14 +426,27 @@ function handlePlayerDisconnect(playerId, gameId) {
         if (remainingPlayers.length <= 1) {
             // Game is over, notify remaining player they won
             if (remainingPlayers.length === 1) {
-                sendToPlayer(remainingPlayers[0].id, {
-                    type: 'GAME_WON'
-                });
-            }
-            
-            // Delete the game
-            delete games[gameId];
-            console.log(`Game ${gameId} ended due to disconnections`);
+            sendToPlayer(remainingPlayers[0].id, {
+            type: 'GAME_WON'
+            });
+                
+                // Match this player with someone waiting if possible
+                if (waitingPlayers.length > 0) {
+                    const winningPlayer = remainingPlayers[0];
+                    const winningSocket = playerSockets[winningPlayer.id];
+                        
+                        if (winningSocket) {
+                            // Send notification that a new match is available
+                            sendToPlayer(winningPlayer.id, {
+                                type: 'NEW_MATCH_AVAILABLE'
+                            });
+                        }
+                    }
+                }
+                
+                // Delete the game
+                delete games[gameId];
+                console.log(`Game ${gameId} ended due to disconnections`);
         }
     }
     
@@ -419,9 +471,51 @@ function generateRandomPieces(count) {
     return pieces;
 }
 
+// Setup WebSocket heartbeat for keeping connections alive behind proxies
+function heartbeat() {
+    this.isAlive = true;
+}
+
+wss.on('connection', function connection(ws) {
+    ws.isAlive = true;
+    ws.on('pong', heartbeat);
+});
+
+// Ping all clients every 30 seconds to keep connections alive
+const interval = setInterval(function ping() {
+    wss.clients.forEach(function each(ws) {
+        if (ws.isAlive === false) {
+            // Client hasn't responded to ping, terminate connection
+            const playerId = ws.playerId;
+            const gameId = ws.gameId;
+            if (playerId) {
+                handlePlayerDisconnect(playerId, gameId);
+            }
+            return ws.terminate();
+        }
+        
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000); // 30 second ping
+
+// Clean up interval on server shutdown
+process.on('SIGINT', function() {
+    clearInterval(interval);
+    process.exit(0);
+});
+
 // Start the server
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Tetris server listening on all interfaces on port ${PORT}`);
+    console.log(`blocq server listening on all interfaces on port ${PORT}`);
     console.log(`Access locally at http://localhost:${PORT}`);
-    console.log(`Access from other devices on the same network at http://<your-ip-address>:${PORT}`);
+    console.log(`Access from other devices via public URL`);
+    console.log(`Active games: 0 | Waiting players: 0`);
+    
+    // Log server statistics every minute
+    setInterval(() => {
+        console.log(`---SERVER STATS---`);
+        console.log(`Active games: ${Object.keys(games).length} | Waiting players: ${waitingPlayers.length}`);
+        console.log(`Connected players: ${Object.keys(playerSockets).length}`);
+    }, 60000); // Log stats every minute
 }); 
