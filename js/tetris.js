@@ -10,10 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Get host from window.location or use fallback
         const host = window.location.hostname || 'localhost';
-        const port = '3000';
         
-        // Construct proper WebSocket URL
-        const wsUrl = host.includes(':') ? `${protocol}//${host}` : `${protocol}//${host}:${port}`;
+        // Construct proper WebSocket URL - in production, use the same port as the page
+        // On Heroku, we don't specify port as it uses the same port for both HTTP and WebSockets
+        let wsUrl;
+        if (window.location.hostname === 'localhost') {
+            // For local development
+            wsUrl = `${protocol}//${host}:3000`;
+        } else {
+            // For production (Heroku, etc.)
+            wsUrl = `${protocol}//${host}`;
+        }
         
         console.log(`Connecting to WebSocket at ${wsUrl}`);
         

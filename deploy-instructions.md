@@ -30,13 +30,36 @@
 
 ### Option 2: Platform as a Service (PaaS)
 
-1. Deploy to Heroku:
+#### Heroku Deployment
+
+1. Create a new Heroku app:
    ```
-   heroku create
+   heroku create your-app-name
+   ```
+
+2. Enable WebSockets support (this is on by default but good to confirm):
+   ```
+   heroku features:enable http-session-affinity
+   ```
+
+3. Push your code to Heroku:
+   ```
    git push heroku main
    ```
 
-2. Or deploy to Railway.app, Render.com, or similar platforms that support Node.js applications.
+4. Scale to at least one web dyno:
+   ```
+   heroku ps:scale web=1
+   ```
+
+5. Monitor logs for any WebSocket issues:
+   ```
+   heroku logs --tail
+   ```
+
+#### Other PaaS Options
+
+You can also deploy to Railway.app, Render.com, or similar platforms that support Node.js applications with WebSockets.
 
 ### Option 3: Virtual Private Server (VPS)
 
