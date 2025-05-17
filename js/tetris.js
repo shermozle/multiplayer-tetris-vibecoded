@@ -923,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Rotate the piece
+    // Rotate the piece clockwise
     function rotatePiece() {
         const originalShape = piece.shape;
         
@@ -934,6 +934,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Transpose and reverse to rotate 90 degrees clockwise
         piece.shape = piece.shape[0].map((_, colIndex) => 
             piece.shape.map(row => row[colIndex]).reverse()
+        );
+        
+        // If collision occurs, revert back
+        if (checkCollision()) {
+            piece.shape = originalShape;
+        }
+    }
+
+    // Rotate the piece counter-clockwise
+    function rotatePieceCounterClockwise() {
+        const originalShape = piece.shape;
+        
+        // Create rotated shape
+        const rows = piece.shape.length;
+        const cols = piece.shape[0].length;
+        
+        // Transpose and reverse to rotate 90 degrees counter-clockwise
+        piece.shape = piece.shape[0].map((_, colIndex) => 
+            piece.shape.map(row => row[piece.shape.length - 1 - colIndex])
         );
         
         // If collision occurs, revert back
@@ -1124,7 +1143,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    startBtn.addEventListener('click', () => {
+    // Add mobile controls overlay
+    function showMobileControlsOverlay() {
+        console.log('Attempting to show mobile controls overlay');
+        
+        // Remove any existing overlay first
+        const existingOverlay = document.getElementById('mobile-controls-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Create new overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'mobile-controls-overlay';
+        overlay.innerHTML = `
+            <div class="mobile-controls-content">
+                <h3>Mobile Controls</h3>
+                <p>Hold to move left/right</p>
+                <p>Up/down to rotate</p>
+                <p>Double tap to hard drop</p>
+            </div>
+        `;
+        
+        // Add to game container
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.appendChild(overlay);
+            console.log('Added overlay to game container');
+            
+            // Force a reflow
+            overlay.offsetHeight;
+            
+            // Show the overlay
+            requestAnimationFrame(() => {
+                overlay.classList.add('show');
+                console.log('Added show class to overlay');
+            });
+            
+            // Hide after 2 seconds
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                console.log('Removed show class from overlay');
+                // Remove from DOM after transition
+                setTimeout(() => {
+                    overlay.remove();
+                }, 300);
+            }, 2000);
+        } else {
+            console.error('Game container not found');
+        }
+    }
+
+    // Modify the start button click handler to show mobile controls
+    startBtn.addEventListener('click', async () => {
         if (isMultiplayer) {
             // In multiplayer, Start button signals player is ready
             sendMessage({
@@ -1140,12 +1211,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         } else {
+            console.log('Starting single player game');
             // In single player, Start button starts the game directly
             cancelAnimationFrame(animationId);
             init();
             isPaused = false;
             startBtn.textContent = 'Restart';
             draw();
+            
+            // Show mobile controls overlay and enter fullscreen on mobile devices
+            if (isMobileDevice()) {
+                console.log('Mobile device detected, showing controls overlay');
+                // Small delay to ensure game container is ready
+                setTimeout(() => {
+                    showMobileControlsOverlay();
+                }, 100);
+                
+                try {
+                    await enterFullscreen();
+                } catch (error) {
+                    console.error('Failed to enter fullscreen:', error);
+                    tryFallbackFullscreen();
+                }
+            }
             
             // Track button click
             if (window.trackEvent) {
@@ -1291,6 +1379,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(animationId);
         init();
         isPaused = true; // Start paused, waiting for player to press Start
+
+        // Try to enter fullscreen on mobile devices
+        if (isMobileDevice()) {
+            try {
+                enterFullscreen();
+            } catch (error) {
+                console.error('Failed to enter fullscreen:', error);
+                tryFallbackFullscreen();
+            }
+        }
     }
 
     // Initialize WebSocket connection when page loads
@@ -1298,6 +1396,268 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set initial music toggle button state
     updateMusicToggleButton();
+
+    // Mobile touch controls and fullscreen mode
+    const fullscreenStats = document.getElementById('fullscreen-stats');
+    const fsScore = document.getElementById('fs-score');
+    const fsLevel = document.getElementById('fs-level');
+    const fsLines = document.getElementById('fs-lines');
+    
+    // Touch gesture tracking variables
+    let lastTap = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchCurrentX = 0;
+    let touchCurrentY = 0;
+    let touchStartTime = 0;
+    let touchMoveInterval = null;
+    let hasMoved = false;
+
+    // Check if device is mobile
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Enter fullscreen mode
+    async function enterFullscreen() {
+        try {
+            const gameContainer = document.getElementById('game-container');
+            
+            // Try to lock screen orientation to portrait
+            if (screen.orientation && screen.orientation.lock) {
+                try {
+                    await screen.orientation.lock('portrait');
+                } catch (e) {
+                    console.log('Could not lock screen orientation:', e);
+                }
+            }
+
+            // Try different fullscreen methods
+            if (gameContainer.requestFullscreen) {
+                await gameContainer.requestFullscreen();
+            } else if (gameContainer.webkitRequestFullscreen) { // Safari
+                await gameContainer.webkitRequestFullscreen();
+            } else if (gameContainer.mozRequestFullScreen) { // Firefox
+                await gameContainer.mozRequestFullScreen();
+            } else if (gameContainer.msRequestFullscreen) { // IE11
+                await gameContainer.msRequestFullscreen();
+            }
+
+            // Add our custom fullscreen class
+            document.body.classList.add('fullscreen-mode');
+            fullscreenStats.style.display = 'block';
+            
+            // Track fullscreen event
+            if (window.trackEvent) {
+                trackEvent('Fullscreen Entered', {
+                    fullscreen_active: true,
+                    device_type: isMobileDevice() ? 'Mobile' : 'Desktop'
+                });
+            }
+        } catch (error) {
+            console.error('Error entering fullscreen:', error);
+            // Try fallback method
+            tryFallbackFullscreen();
+        }
+    }
+
+    // Fallback fullscreen method
+    function tryFallbackFullscreen() {
+        const gameContainer = document.getElementById('game-container');
+        
+        // Try to force fullscreen using various methods
+        if (gameContainer.webkitEnterFullscreen) {
+            gameContainer.webkitEnterFullscreen();
+        } else if (gameContainer.webkitRequestFullscreen) {
+            gameContainer.webkitRequestFullscreen();
+        } else if (gameContainer.mozRequestFullScreen) {
+            gameContainer.mozRequestFullScreen();
+        } else if (gameContainer.msRequestFullscreen) {
+            gameContainer.msRequestFullscreen();
+        }
+        
+        // Add our custom fullscreen class anyway
+        document.body.classList.add('fullscreen-mode');
+        fullscreenStats.style.display = 'block';
+    }
+
+    // Exit fullscreen mode
+    async function exitFullscreen() {
+        try {
+            // Unlock screen orientation
+            if (screen.orientation && screen.orientation.unlock) {
+                try {
+                    await screen.orientation.unlock();
+                } catch (e) {
+                    console.log('Could not unlock screen orientation:', e);
+                }
+            }
+
+            if (document.exitFullscreen) {
+                await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { // Safari
+                await document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) { // Firefox
+                await document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) { // IE11
+                await document.msExitFullscreen();
+            }
+
+            document.body.classList.remove('fullscreen-mode');
+            fullscreenStats.style.display = 'none';
+            
+            // Track fullscreen event
+            if (window.trackEvent) {
+                trackEvent('Fullscreen Exited', {
+                    fullscreen_active: false,
+                    device_type: isMobileDevice() ? 'Mobile' : 'Desktop'
+                });
+            }
+        } catch (error) {
+            console.error('Error exiting fullscreen:', error);
+        }
+    }
+    
+    // Update fullscreen stats
+    function updateFullscreenStats() {
+        fsScore.textContent = score;
+        fsLevel.textContent = level;
+        fsLines.textContent = lines;
+    }
+    
+    // Add to the updateScore function to update fullscreen stats
+    const originalUpdateScore = updateScore;
+    updateScore = function() {
+        originalUpdateScore();
+        updateFullscreenStats();
+    };
+
+    // Add escape key handler to exit fullscreen
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.body.classList.contains('fullscreen-mode')) {
+            exitFullscreen();
+        }
+    });
+
+    // Add canvas as a touch area for gesture controls
+    canvas.classList.add('touch-area');
+    
+    // Touch start - record position and time for swipe detection
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        
+        // Handle starting the game with a tap when not playing
+        if (gameOver) {
+            // Restart the game if it's game over
+            cancelAnimationFrame(animationId);
+            init();
+            isPaused = false;
+            startBtn.textContent = 'Restart';
+            draw();
+            return;
+        }
+        
+        if (isPaused) {
+            // Unpause the game if it's paused
+            isPaused = false;
+            pauseBtn.textContent = 'Pause';
+            lastTime = 0;
+            draw();
+            return;
+        }
+        
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchCurrentX = touch.clientX;
+        touchCurrentY = touch.clientY;
+        touchStartTime = Date.now();
+        hasMoved = false;
+        
+        // Handle double-tap for hard drop
+        const now = Date.now();
+        const timeDiff = now - lastTap;
+        
+        if (timeDiff < 300) { // Double tap detected (within 300ms)
+            hardDrop();
+            lastTap = 0; // Reset to prevent triple-tap detection
+        } else {
+            lastTap = now;
+        }
+    });
+    
+    // Touch move - detect swipes for piece movement and rotation
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (gameOver || isPaused) return;
+        
+        const touch = e.touches[0];
+        touchCurrentX = touch.clientX;
+        touchCurrentY = touch.clientY;
+        const deltaX = touchCurrentX - touchStartX;
+        const deltaY = touchCurrentY - touchStartY;
+        
+        // Detect significant vertical movement for rotation
+        if (Math.abs(deltaY) > 50) { // Swipe up or down
+            if (deltaY < 0) { // Swipe up - clockwise rotation
+                rotatePiece();
+            } else { // Swipe down - counter-clockwise rotation
+                rotatePieceCounterClockwise();
+            }
+            // Reset the touch start position to prevent multiple rotations
+            touchStartY = touchCurrentY;
+            return;
+        }
+        
+        // Detect significant horizontal movement for piece movement
+        if (Math.abs(deltaX) > 30) {
+            hasMoved = true;
+            
+            // Clear any existing movement interval
+            clearInterval(touchMoveInterval);
+            
+            // Determine direction and move piece
+            const direction = deltaX > 0 ? 1 : -1;
+            movePiece(direction);
+            
+            // Update starting position for continuous movement
+            touchStartX = touchCurrentX;
+            
+            // Set up continuous movement when holding and swiping
+            touchMoveInterval = setInterval(() => {
+                movePiece(direction);
+            }, 400);
+        }
+    });
+    
+    // Touch end - clean up intervals
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        // Clear any movement interval
+        clearInterval(touchMoveInterval);
+    });
+
+    // Add fullscreen change event listener
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    function handleFullscreenChange() {
+        if (!document.fullscreenElement && 
+            !document.webkitFullscreenElement && 
+            !document.mozFullScreenElement &&
+            !document.msFullscreenElement) {
+            // Exited fullscreen
+            document.body.classList.remove('fullscreen-mode');
+            fullscreenStats.style.display = 'none';
+            
+            // Try to unlock screen orientation
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock().catch(e => console.log('Could not unlock screen orientation:', e));
+            }
+        }
+    }
 
     // Show game mode selection on page load
     showGameModes();

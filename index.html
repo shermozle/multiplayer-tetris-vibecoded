@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>blocq Game</title>
     <link rel="icon" type="image/png" href="assets/images/favicon.png">
     <link rel="shortcut icon" href="assets/images/favicon.png">
@@ -43,6 +43,13 @@
             <button id="cancel-wait-btn">Cancel</button>
         </div>
         
+        <!-- Fullscreen stats overlay for mobile -->
+        <div id="fullscreen-stats" class="fullscreen-stats">
+            <p>Score: <span id="fs-score">0</span></p>
+            <p>Level: <span id="fs-level">1</span></p>
+            <p>Lines: <span id="fs-lines">0</span></p>
+        </div>
+        
         <div id="game-container" class="game-container hidden">
             <div class="game-area">
                 <div class="player-board">
@@ -79,6 +86,8 @@
                 </div>
             </div>
         </div>
+        
+        <!-- No visible mobile controls - using gesture-based interaction -->
     </div>
     <!-- Amplitude Analytics SDK -->
     <script type="text/javascript" src="https://cdn.amplitude.com/libs/amplitude-8.21.4-min.js"></script>

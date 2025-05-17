@@ -1,5 +1,15 @@
 # blocq Multiplayer Deployment Guide
 
+## Mobile Support
+
+blocq includes mobile-friendly controls and responsive design:
+
+- **Touch Controls**: Virtual buttons for movement and actions
+- **Press and Hold**: Hold left/right buttons to move pieces horizontally
+- **Single Tap**: Tap the rotate button to rotate the piece
+- **Double Tap**: Double-tap the drop button for hard drop, single tap for soft drop
+- **Fullscreen Mode**: Tap the fullscreen button to maximize gameplay area
+
 ## Local Deployment
 
 1. Install dependencies:
