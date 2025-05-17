@@ -245,6 +245,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (musicEnabled) {
             bgMusic.play().catch(e => console.log("Couldn't play background music:", e));
         }
+
+        // Show mobile controls overlay and enter fullscreen on mobile devices
+        if (isMobileDevice()) {
+            console.log('Mobile device detected, showing controls overlay');
+            // Small delay to ensure game container is ready
+            setTimeout(() => {
+                showMobileControlsOverlay();
+            }, 100);
+            
+            try {
+                enterFullscreen();
+            } catch (error) {
+                console.error('Failed to enter fullscreen:', error);
+                tryFallbackFullscreen();
+            }
+        }
     }
     
     // Handle NEXT_PIECE message
