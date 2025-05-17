@@ -8,62 +8,61 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize WebSocket connection
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Get host from window.location or use fallback
         const host = window.location.hostname || 'localhost';
+        const port = window.location.port || '3000';
         
-        // Construct proper WebSocket URL - in production, use the same port as the page
-        // On Heroku, we don't specify port as it uses the same port for both HTTP and WebSockets
-        let wsUrl;
-        if (window.location.hostname === 'localhost') {
-            // For local development
-            wsUrl = `${protocol}//${host}:3000`;
-        } else {
-            // For production (Heroku, etc.)
-            wsUrl = `${protocol}//${host}`;
-        }
+        // Construct WebSocket URL
+        const wsUrl = `${protocol}//${host}:${port}`;
         
-        console.log(`Connecting to WebSocket at ${wsUrl}`);
+        console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
         
-        socket = new WebSocket(wsUrl);
-        
-        socket.onopen = function() {
-            console.log('WebSocket connection established');
-            isConnected = true;
-            reconnectAttempts = 0;
+        try {
+            socket = new WebSocket(wsUrl);
             
-            // If player was in a game and reconnected, attempt to rejoin
-            if (isMultiplayer && playerName && gameId) {
-                sendMessage({
-                    type: 'REJOIN_GAME',
-                    gameId: gameId,
-                    playerId: playerId,
-                    playerName: playerName
-                });
-            }
-        };
-        
-        socket.onclose = function(event) {
-            console.log('WebSocket connection closed', event);
-            isConnected = false;
+            socket.onopen = function() {
+                console.log('WebSocket connection established');
+                isConnected = true;
+                reconnectAttempts = 0;
+                
+                // If player was in a game and reconnected, attempt to rejoin
+                if (isMultiplayer && playerName && gameId) {
+                    sendMessage({
+                        type: 'REJOIN_GAME',
+                        gameId: gameId,
+                        playerId: playerId,
+                        playerName: playerName
+                    });
+                }
+            };
             
-            // Attempt to reconnect if not intentionally closed
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-                reconnectAttempts++;
-                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-                setTimeout(connectWebSocket, 2000);
-            } else {
-                console.log('Max reconnect attempts reached');
+            socket.onclose = function(event) {
+                console.log('WebSocket connection closed', event);
+                isConnected = false;
+                
+                // Attempt to reconnect if not intentionally closed
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                    setTimeout(connectWebSocket, 2000);
+                } else {
+                    console.log('Max reconnect attempts reached');
+                    showConnectionError();
+                }
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                // Show error to user
                 showConnectionError();
-            }
-        };
-        
-        socket.onerror = function(error) {
-            console.error('WebSocket error:', error);
-        };
-        
-        socket.onmessage = function(event) {
-            handleServerMessage(event.data);
-        };
+            };
+            
+            socket.onmessage = function(event) {
+                handleServerMessage(event.data);
+            };
+        } catch (error) {
+            console.error('Error creating WebSocket connection:', error);
+            showConnectionError();
+        }
     }
     
     // Send message to the server
@@ -138,8 +137,43 @@ document.addEventListener('DOMContentLoaded', () => {
         showWaitingRoom();
     }
     
+    // Handle PLAYER_READY message
+    function handlePlayerReadyMessage(message) {
+        const readyPlayerId = message.playerId;
+        console.log(`Player ${readyPlayerId} is ready`);
+        
+        // Update opponent ready status if applicable
+        if (opponents[readyPlayerId]) {
+            opponents[readyPlayerId].ready = true;
+            
+            // Update UI to show opponent is ready
+            console.log(`Player ${opponents[readyPlayerId].name} is ready`);
+            
+            // Add visual indication that opponent is ready
+            const opponentElement = document.getElementById(`opponent-${readyPlayerId}`);
+            if (opponentElement) {
+                const readyIndicator = document.createElement('div');
+                readyIndicator.className = 'ready-indicator';
+                readyIndicator.textContent = 'READY';
+                opponentElement.appendChild(readyIndicator);
+            }
+        }
+
+        // Check if all players are ready
+        const allPlayersReady = Object.values(opponents).every(opponent => opponent.ready);
+        console.log('All players ready:', allPlayersReady);
+
+        // If all players are ready, update UI but don't send another READY message
+        if (allPlayersReady) {
+            console.log('All players are ready, waiting for server to start game...');
+            startBtn.disabled = true;
+            startBtn.textContent = 'Starting...';
+        }
+    }
+    
     // Handle GAME_MATCHED message
     function handleGameMatchedMessage(message) {
+        console.log('Game matched:', message);
         gameId = message.gameId;
         playerId = message.yourId;
         
@@ -167,28 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Show game container with opponent boards
         showGameContainer();
-    }
-    
-    // Handle PLAYER_READY message
-    function handlePlayerReadyMessage(message) {
-        const readyPlayerId = message.playerId;
-        
-        // Update opponent ready status if applicable
-        if (opponents[readyPlayerId]) {
-            opponents[readyPlayerId].ready = true;
-            
-            // Update UI to show opponent is ready
-            console.log(`Player ${opponents[readyPlayerId].name} is ready`);
-            
-            // Add visual indication that opponent is ready
-            const opponentElement = document.getElementById(`opponent-${readyPlayerId}`);
-            if (opponentElement) {
-                const readyIndicator = document.createElement('div');
-                readyIndicator.className = 'ready-indicator';
-                readyIndicator.textContent = 'READY';
-                opponentElement.appendChild(readyIndicator);
-            }
-        }
+
+        // Enable start button for the current player
+        startBtn.disabled = false;
+        startBtn.textContent = 'Ready';
     }
     
     // Handle GAME_START message
@@ -198,6 +214,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize piece queue from server
         pieceQueue = message.pieceQueue || [];
         
+        // Reset game state
+        board = createBoard(BOARD_WIDTH, BOARD_HEIGHT);
+        resetScore();
+        gameOver = false;
+        isPaused = false;
+        
+        // Create initial piece
+        createNewPiece();
+        drawBoard();
+        drawNextPiece();
+        
         // Enable start button and update text
         startBtn.disabled = false;
         startBtn.textContent = 'Restart';
@@ -205,8 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Start the game immediately
         console.log('Starting game now...');
         cancelAnimationFrame(animationId);
-        init();
-        isPaused = false;
+        lastTime = 0;
         draw();
         
         // Play background music if enabled
@@ -1194,9 +1220,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modify the start button click handler to show mobile controls
+    // Modify the start button click handler for multiplayer
     startBtn.addEventListener('click', async () => {
         if (isMultiplayer) {
+            console.log('Player clicked ready button');
             // In multiplayer, Start button signals player is ready
             sendMessage({
                 type: 'READY'
@@ -1396,6 +1423,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set initial music toggle button state
     updateMusicToggleButton();
+
+    // Function to fetch and display server status
+    async function fetchServerStatus() {
+        try {
+            const response = await fetch('/status');
+            const data = await response.json();
+            console.log('Server status:', data);
+            
+            // Update waiting room display if we're in the waiting room
+            if (!waitingRoom.classList.contains('hidden')) {
+                playerCount.textContent = data.waitingPlayers;
+            }
+            
+            // Log server stats for debugging
+            console.log(`Active games: ${data.games} | Waiting players: ${data.waitingPlayers} | Connected players: ${data.connectedPlayers}`);
+        } catch (error) {
+            console.error('Error fetching server status:', error);
+        }
+    }
+
+    // Fetch server status every 5 seconds
+    setInterval(fetchServerStatus, 5000);
+    // Initial fetch
+    fetchServerStatus();
 
     // Mobile touch controls and fullscreen mode
     const fullscreenStats = document.getElementById('fullscreen-stats');
