@@ -9,10 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
-        const port = window.location.port || '3000';
         
         // Construct WebSocket URL
-        const wsUrl = `${protocol}//${host}:${port}`;
+        let wsUrl;
+        if (window.location.hostname === 'localhost') {
+            // For local development, use port 3000
+            wsUrl = `${protocol}//${host}:3000`;
+        } else {
+            // For production, use the same port as the HTTP server
+            wsUrl = `${protocol}//${host}`;
+        }
         
         console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
         
