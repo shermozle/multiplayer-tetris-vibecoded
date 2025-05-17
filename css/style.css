@@ -599,4 +599,39 @@ button:active {
     margin: 10px 0;
     font-size: 18px;
     line-height: 1.4;
+}
+
+/* Fullscreen mute button */
+.fullscreen-mute-btn {
+    display: none; /* Hide by default */
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 200;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.fullscreen-mute-btn:hover {
+    background-color: rgba(0, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.fullscreen-mute-btn.off {
+    color: #666;
+    border-color: #666;
+}
+
+/* Only show in fullscreen mode */
+.fullscreen-mode .fullscreen-mute-btn {
+    display: flex;
 } 

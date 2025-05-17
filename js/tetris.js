@@ -1418,9 +1418,56 @@ document.addEventListener('DOMContentLoaded', () => {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Enter fullscreen mode
+    // Add fullscreen mute button
+    function createFullscreenMuteButton() {
+        console.log('Creating fullscreen mute button');
+        const muteBtn = document.createElement('button');
+        muteBtn.className = 'fullscreen-mute-btn';
+        muteBtn.innerHTML = musicEnabled ? '🔊' : '🔇';
+        muteBtn.title = 'Toggle Sound';
+        
+        // Add to game container instead of body
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.appendChild(muteBtn);
+            console.log('Added mute button to game container');
+        } else {
+            console.error('Game container not found, adding to body');
+            document.body.appendChild(muteBtn);
+        }
+
+        muteBtn.addEventListener('click', () => {
+            musicEnabled = !musicEnabled;
+            localStorage.setItem('tetrisMusicEnabled', musicEnabled);
+            
+            // Update button appearance
+            muteBtn.innerHTML = musicEnabled ? '🔊' : '🔇';
+            muteBtn.classList.toggle('off', !musicEnabled);
+            
+            // Update music playback
+            if (musicEnabled) {
+                if (!isPaused && !gameOver) {
+                    bgMusic.play().catch(e => console.log("Couldn't play background music:", e));
+                }
+            } else {
+                bgMusic.pause();
+            }
+            
+            // Update the regular music toggle button to match
+            musicToggleBtn.textContent = musicEnabled ? 'Music: On' : 'Music: Off';
+            musicToggleBtn.classList.toggle('off', !musicEnabled);
+        });
+
+        return muteBtn;
+    }
+
+    // Create the mute button
+    const fullscreenMuteBtn = createFullscreenMuteButton();
+
+    // Update the enterFullscreen function to show the mute button
     async function enterFullscreen() {
         try {
+            console.log('Entering fullscreen mode');
             const gameContainer = document.getElementById('game-container');
             
             // Try to lock screen orientation to portrait
@@ -1445,7 +1492,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Add our custom fullscreen class
             document.body.classList.add('fullscreen-mode');
+            console.log('Added fullscreen-mode class to body');
+            
             fullscreenStats.style.display = 'block';
+            
+            // Update mute button state and ensure it's visible
+            fullscreenMuteBtn.innerHTML = musicEnabled ? '🔊' : '🔇';
+            fullscreenMuteBtn.classList.toggle('off', !musicEnabled);
+            fullscreenMuteBtn.style.display = 'flex';
+            console.log('Updated mute button state');
             
             // Track fullscreen event
             if (window.trackEvent) {
@@ -1456,34 +1511,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error entering fullscreen:', error);
-            // Try fallback method
             tryFallbackFullscreen();
         }
     }
 
-    // Fallback fullscreen method
-    function tryFallbackFullscreen() {
-        const gameContainer = document.getElementById('game-container');
-        
-        // Try to force fullscreen using various methods
-        if (gameContainer.webkitEnterFullscreen) {
-            gameContainer.webkitEnterFullscreen();
-        } else if (gameContainer.webkitRequestFullscreen) {
-            gameContainer.webkitRequestFullscreen();
-        } else if (gameContainer.mozRequestFullScreen) {
-            gameContainer.mozRequestFullScreen();
-        } else if (gameContainer.msRequestFullscreen) {
-            gameContainer.msRequestFullscreen();
-        }
-        
-        // Add our custom fullscreen class anyway
-        document.body.classList.add('fullscreen-mode');
-        fullscreenStats.style.display = 'block';
-    }
-
-    // Exit fullscreen mode
+    // Update the exitFullscreen function to hide the mute button
     async function exitFullscreen() {
         try {
+            console.log('Exiting fullscreen mode');
             // Unlock screen orientation
             if (screen.orientation && screen.orientation.unlock) {
                 try {
@@ -1504,7 +1539,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             document.body.classList.remove('fullscreen-mode');
+            console.log('Removed fullscreen-mode class from body');
+            
             fullscreenStats.style.display = 'none';
+            
+            // Hide mute button
+            fullscreenMuteBtn.style.display = 'none';
+            console.log('Hidden mute button');
             
             // Track fullscreen event
             if (window.trackEvent) {
@@ -1644,18 +1685,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     function handleFullscreenChange() {
+        console.log('Fullscreen change detected');
         if (!document.fullscreenElement && 
             !document.webkitFullscreenElement && 
             !document.mozFullScreenElement &&
             !document.msFullscreenElement) {
             // Exited fullscreen
             document.body.classList.remove('fullscreen-mode');
+            console.log('Removed fullscreen-mode class from body');
             fullscreenStats.style.display = 'none';
+            
+            // Hide mute button
+            fullscreenMuteBtn.style.display = 'none';
+            console.log('Hidden mute button');
             
             // Try to unlock screen orientation
             if (screen.orientation && screen.orientation.unlock) {
                 screen.orientation.unlock().catch(e => console.log('Could not unlock screen orientation:', e));
             }
+        } else {
+            // Entered fullscreen
+            document.body.classList.add('fullscreen-mode');
+            console.log('Added fullscreen-mode class to body');
+            
+            // Show mute button
+            fullscreenMuteBtn.style.display = 'flex';
+            console.log('Showed mute button');
         }
     }
 
